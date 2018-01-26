@@ -1,0 +1,35 @@
+# directories
+log/
+tmp/
+
+*~
+*.bak
+*.deb
+*.dump
+*.log
+*.mo
+*.[oa]
+*.so
+*.py[co]
+
+# archives
+*.tar.bz2
+*.tar.gz
+*.tgz
+*.zip
+
+# media
+*.avi
+*.bmp
+*.flv
+*.gif
+*.jpeg
+*.jpg
+*.mkv
+*.mov
+*.mp3
+*.mp4
+*.png
+*.ts
+
+tags
