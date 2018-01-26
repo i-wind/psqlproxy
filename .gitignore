@@ -1,4 +1,7 @@
 # directories
+.build/
+.venv/
+.vscode/
 log/
 tmp/
 
@@ -13,8 +16,9 @@ tmp/
 *.py[co]
 
 # archives
-*.tar.bz2
-*.tar.gz
+*.bz2
+*.gz
+*.xz
 *.tgz
 *.zip
 
