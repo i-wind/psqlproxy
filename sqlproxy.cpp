@@ -15,9 +15,9 @@ namespace {
             ("config,c", po::value<std::string>(&config)->required(), "path to configuration")
         ;
 
-        auto options = po::command_line_parser(argc, argv).options(desc).run();
+        auto params = po::command_line_parser(argc, argv).options(desc).run();
         po::variables_map vm;
-        po::store(options, vm);
+        po::store(params, vm);
 
         if (vm.count("help")) {
             std::cerr << desc << "\n";
