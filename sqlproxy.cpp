@@ -1,8 +1,10 @@
 #include <iostream>
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 
 namespace {
+    namespace fs = boost::filesystem;
     namespace po = boost::program_options;
 
     void init_all(int argc, char **argv) {
@@ -24,7 +26,10 @@ namespace {
 
         po::notify(vm);
 
-        std::cout << "configuration: '" << config << "'\n";
+        // std::cout << "configuration: '" << config << "'\n";
+        if (!fs::exists(config)) {
+            throw std::runtime_error(config + " does not exist...");
+        }
     }
 }
 
@@ -35,6 +40,6 @@ int main(int argc, char **argv) {
     } catch (po::required_option &err) {
         std::cerr << "  error: " << err.what() << "\n";
     } catch (std::exception &e) {
-        std::cerr << e.what() << "\n";
+        std::cerr << "  error:" << e.what() << "\n";
     }
 }

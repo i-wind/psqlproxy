@@ -9,7 +9,7 @@ env = Environment(
     CPPPATH=['/usr/local/include'],
     LIBPATH=['/usr/local/lib'],
     LIBS=Split('pthread boost_system boost_program_options boost_thread '
-               'boost_regex')
+               'boost_filesystem boost_regex')
 )
 
 env.Program('sqlproxy', ['sqlproxy.cpp'])
