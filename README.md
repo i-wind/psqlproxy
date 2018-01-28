@@ -12,3 +12,25 @@ practice any non-privileged port number can be used.
 ### Protocol version 3.0 documentation:
 
 * [PostgreSQL Frontend/Backend Protocol](https://www.postgresql.org/docs/9.4/static/protocol.html)
+
+### Setup database
+
+Create test role and database
+
+    $ psql -U postgres -h localhost
+    postgres=# CREATE USER test with PASSWORD 'test';
+    postgres=# CREATE DATABASE testdb WITH ENCODING='UTF8' OWNER=test;
+
+### Build sqlproxy
+
+Commands to build sqlproxy
+
+with scons
+
+    $ scons -Q
+
+with cmake:
+
+    $ mkdir .build && cd .build
+    $ cmake ..
+    $ make

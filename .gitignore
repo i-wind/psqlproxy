@@ -36,4 +36,5 @@ tmp/
 *.png
 *.ts
 
-tags
+.sconsign.dblite
+sqlproxy
