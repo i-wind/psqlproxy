@@ -118,15 +118,20 @@ namespace sqlproxy {
         void on_client_read(const boost::system::error_code& ec,
                             const size_t& bytes_transferred) {
             if (!ec) {
-                std::cout << static_cast<char>(client_data_[0]) << " ";
-                uint64_t p = (client_data_[1] << 24) +
-                             (client_data_[2] << 16) +
-                             (client_data_[3] << 8) +
-                             client_data_[4];
-                std::cout << p << " ";
-                std::cout << std::string(
-                    reinterpret_cast<const char*>(&client_data_[5]),
-                    bytes_transferred - 5) << "\n";
+                if (client_data_[0] == 'Q') {
+                    std::cout << client_data_[0] << " ";
+                    uint64_t p = (client_data_[1] << 24) +
+                                 (client_data_[2] << 16) +
+                                 (client_data_[3] << 8) +
+                                 client_data_[4];
+                    std::cout << p << " ";
+                    std::string command(
+                        // const_cast<const char*>(&client_data_[5]),
+                        &client_data_[5],
+                        bytes_transferred - 5);
+                    std::cout << command << "\n";
+                }
+
                 async_write(
                     server_socket_,
                     boost::asio::buffer(client_data_, bytes_transferred),
@@ -172,8 +177,8 @@ namespace sqlproxy {
         tcp::socket server_socket_;
 
         enum { max_length = 4096 };
-        std::array<uint8_t, max_length> client_data_;
-        std::array<uint8_t, max_length> server_data_;
+        std::array<char, max_length> client_data_;
+        std::array<char, max_length> server_data_;
 
         boost::mutex mutex_;
     };  // class session

@@ -11,4 +11,7 @@ env = Environment(
                'boost_filesystem boost_regex')
 )
 
+env['CPPPATH'].append(filter(None, ARGUMENTS.get("cpppath", "").split(",")))
+env['LIBPATH'].append(filter(None, ARGUMENTS.get("libpath", "").split(",")))
+
 env.Program('sqlproxy', ['sqlproxy.cpp'])
