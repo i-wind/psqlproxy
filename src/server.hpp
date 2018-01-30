@@ -35,9 +35,13 @@ public:
 
     /// Session constructor
     session(boost::asio::io_service& ios)
-        : client_socket_(ios),
-            server_socket_(ios)
-    {}
+        : client_socket_(ios)
+        , server_socket_(ios)
+        , logger_(ios, "")
+    {
+        // Set the name of the file that all logger instances will use.
+        logger_.use_file("sqlproxy.log");
+    }
 
     /// Client socket property
     tcp::socket& client_socket() {
@@ -107,18 +111,16 @@ private:
                         const size_t& bytes_transferred) {
         if (!ec) {
             if (client_data_[0] == 'Q') {
-                // Log sql request to console
-                std::cout << client_data_[0] << " ";
-                uint64_t p = (client_data_[1] << 24) +
-                             (client_data_[2] << 16) +
-                             (client_data_[3] << 8) +
-                             client_data_[4];
-                std::cout << p << " ";
+                // Log sql request
+                // uint64_t p = (client_data_[1] << 24) +
+                //              (client_data_[2] << 16) +
+                //              (client_data_[3] << 8) +
+                //              client_data_[4];
+                // std::cout << p << "] ";
                 std::string command(
-                    // const_cast<const char*>(&client_data_[5]),
                     &client_data_[5],
-                    bytes_transferred - 5);
-                std::cout << command << "\n";
+                    bytes_transferred - 6);
+                logger_.log(command);
             }
 
             async_write(
@@ -180,6 +182,7 @@ private:
 
     tcp::socket client_socket_;
     tcp::socket server_socket_;
+    services::logger logger_;
 
     enum { max_length = 4096 };
     std::array<char, max_length> client_data_;

@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <ctime>
 
 namespace services {
 
@@ -138,11 +139,22 @@ public:
             &logger_service::use_file_impl, this, file));
     }
 
+    std::string cur_time() const {
+        std::array<char, 24> buf;
+        timeval tv;
+        gettimeofday(&tv, 0);
+        std::tm *now = localtime(&tv.tv_sec);
+        snprintf(&buf[0], 24, "%d-%02d-%02d %02d:%02d:%02d.%03ld",
+                 now->tm_year+1900, now->tm_mon+1, now->tm_mday, now->tm_hour,
+                 now->tm_min, now->tm_sec, tv.tv_usec/1000);
+
+        return std::string(&buf[0], 23);
+    }
+
     /// Log a message.
     void log(impl_type& impl, const std::string& message) {
-        // Format the text to be logged.
         std::ostringstream os;
-        os << impl->identifier << ": " << message;
+        os << "[" << cur_time() << "] " << impl->identifier << ": " << message;
 
         // Pass the work of opening the file to the background thread.
         work_io_service_.post(boost::bind(
@@ -155,7 +167,7 @@ private:
     void use_file_impl(const std::string& file) {
         ofstream_.close();
         ofstream_.clear();
-        ofstream_.open(file.c_str());
+        ofstream_.open(file.c_str(), std::ios_base::app);
     }
 
     /// Helper function used to log a message from within the private io_service's
@@ -178,6 +190,8 @@ private:
     /// The file to which log messages will be written.
     std::ofstream ofstream_;
 };
+
+boost::asio::io_service::id logger_service::id;
 
 /// Typedef for typical logger usage.
 typedef basic_logger<logger_service> logger;
