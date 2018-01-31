@@ -34,13 +34,13 @@ public:
     typedef boost::shared_ptr<session> ptr_type;
 
     /// Session constructor
-    session(boost::asio::io_service& ios)
+    session(boost::asio::io_service& ios, const std::string& log_name)
         : client_socket_(ios)
         , server_socket_(ios)
-        , logger_(ios, "")
+        , logger_(ios, "SQL")
     {
         // Set the name of the file that all logger instances will use.
-        logger_.use_file("sqlproxy.log");
+        logger_.use_file(log_name);
     }
 
     /// Client socket property
@@ -197,21 +197,23 @@ class server
 public:
     server(boost::asio::io_service& io_service,
            const std::string& local_host, uint16_t local_port,
-           const std::string& server_host, uint16_t server_port)
-        : io_service_(io_service),
-            localhost_address_(
-                boost::asio::ip::address_v4::from_string(local_host)),
-            acceptor_(io_service_,
-                      tcp::endpoint(localhost_address_, local_port)),
-            server_port_(server_port),
-            server_host_(server_host)
+           const std::string& server_host, uint16_t server_port,
+           const std::string& log_name)
+        : io_service_(io_service)
+        , localhost_address_(
+              boost::asio::ip::address_v4::from_string(local_host))
+        , acceptor_(io_service_,
+                    tcp::endpoint(localhost_address_, local_port))
+        , server_port_(server_port)
+        , server_host_(server_host)
+        , log_name_(log_name)
     {}
 
     /// Accept client connections
     bool accept_connections() {
         try {
             // Create session with client/server sockets
-            session_ = boost::make_shared<session>(io_service_);
+            session_ = boost::make_shared<session>(io_service_, log_name_);
 
             acceptor_.async_accept(
                 session_->client_socket(),
@@ -249,6 +251,7 @@ private:
     session::ptr_type session_;
     uint16_t server_port_;
     std::string server_host_;
+    std::string log_name_;
 };  // class server
 
 }  // namespace sqlproxy

@@ -164,10 +164,14 @@ public:
 private:
     /// Helper function used to open the output file from within the private
     /// io_service's thread.
+    /// Must be executed only once
     void use_file_impl(const std::string& file) {
-        ofstream_.close();
-        ofstream_.clear();
-        ofstream_.open(file.c_str(), std::ios_base::app);
+        // ofstream_.close();
+        // ofstream_.clear();
+        if (!ofstream_.is_open()) {
+            std::cerr << "Opening log " << file << "\n";
+            ofstream_.open(file.c_str(), std::ios_base::app);
+        }
     }
 
     /// Helper function used to log a message from within the private io_service's

@@ -51,16 +51,14 @@ void init_all(int argc, char **argv) {
     uint16_t local_port = proxy_config.get<int>("proxy.proxy_port");
     std::string server_ip = proxy_config.get<std::string>("proxy.postgresql_ip");
     uint16_t server_port = proxy_config.get<int>("proxy.postgresql_port");
-    std::string logname = proxy_config.get<std::string>("logger.filename");
+    std::string log_name = proxy_config.get<std::string>("logger.filename");
 
     std::cerr << "proxy: " << local_ip << ":" << local_port << ", "
               << "server: " <<  server_ip << ":" << server_port << "\n";
 
     boost::asio::io_service io_service;
-    sqlproxy::server server(
-        io_service,
-        local_ip, local_port,
-        server_ip, server_port);
+    sqlproxy::server server(io_service, local_ip, local_port,
+                            server_ip, server_port, log_name);
 
     server.accept_connections();
     io_service.run();

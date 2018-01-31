@@ -37,15 +37,15 @@ with cmake:
 
 ### Example of configuration
 
-logger {
-    filename "sqlproxy.log"
-}
-proxy {
-    proxy_ip "127.0.0.1"
-    proxy_port 3333
-    postgresql_ip "127.0.0.1"
-    postgresql_port 5432
-}
+    logger {
+        filename "sqlproxy.log"
+    }
+    proxy {
+        proxy_ip "127.0.0.1"
+        proxy_port 3333
+        postgresql_ip "127.0.0.1"
+        postgresql_port 5432
+    }
 
 ### Execute command
 
@@ -53,4 +53,4 @@ proxy {
 
 ### Testing
 
-    $ pgbench -h localhost -U test -d testdb -p 3333 -c 24 -j 2 -T 360
+    $ pgbench -h localhost -U test -d testdb -p 3333 -c 32 -j 4 -T 360
