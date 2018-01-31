@@ -122,6 +122,20 @@ private:
                     bytes_transferred - 6);
                 logger_.log(command);
             }
+            else {
+                // Log connection user and database
+                std::string value(&client_data_[0], bytes_transferred);
+                std::size_t pos = value.find("user");
+                if (pos != std::string::npos) {
+                    std::size_t pos1 = value.find("database");
+                    if (pos1 != std::string::npos) {
+                        std::stringstream ss;
+                        ss << "Connection user: " << value.substr(pos + 5, pos1 - pos - 6)
+                           << ", database: " << value.substr(pos1 + 9);
+                        logger_.log(ss.str());
+                    }
+                }
+            }
 
             async_write(
                 server_socket_,
