@@ -50,15 +50,18 @@ public:
 
     void start(const std::string& server_host,
                uint16_t server_port) {
+        auto self = shared_from_this();
         /// Connect to PostgreSQL server
         server_socket_.async_connect(
             tcp::endpoint(
                 ip::address::from_string(server_host),
                 server_port),
-            boost::bind(
-                &session::on_server_connect,
-                shared_from_this(),
-                boost::asio::placeholders::error));
+            [self] (const boost::system::error_code& ec) {
+                if (!ec) {
+                    std::cerr << "Connection to PostgreSQL\n";
+                    self->on_server_connect(ec);
+                }
+            });
     }
 
 private:
@@ -131,7 +134,7 @@ private:
                     if (pos1 != std::string::npos) {
                         std::stringstream ss;
                         ss << "Connection user: " << value.substr(pos + 5, pos1 - pos - 6)
-                           << ", database: " << value.substr(pos1 + 9);
+                           << ", database: " << value.substr(pos1 + 9, value.size() - pos1 - 11);
                         logger_.log(ss.str());
                     }
                 }
