@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <csignal>
 
 
 namespace pt = boost::property_tree;
@@ -46,29 +47,54 @@ void init_all(int argc, char **argv) {
     pt::info_parser::read_info(in, proxy_config);
     in.close();
 
-    std::string local_ip = proxy_config.get<std::string>("SQLProxy.proxy_ip");
-    uint16_t local_port = proxy_config.get<int>("SQLProxy.proxy_port");
-    std::string server_ip = proxy_config.get<std::string>("SQLProxy.postgresql_ip");
-    uint16_t server_port = proxy_config.get<int>("SQLProxy.postgresql_port");
+    std::string local_ip = proxy_config.get<std::string>("proxy.proxy_ip");
+    uint16_t local_port = proxy_config.get<int>("proxy.proxy_port");
+    std::string server_ip = proxy_config.get<std::string>("proxy.postgresql_ip");
+    uint16_t server_port = proxy_config.get<int>("proxy.postgresql_port");
+    std::string log_name = proxy_config.get<std::string>("logger.filename");
 
-    std::cout << "local: " << local_ip << ":" << local_port << ", "
-                << "remote: " <<  server_ip << ":" << server_port << "\n";
+    std::cerr << "proxy: " << local_ip << ":" << local_port << ", "
+              << "server: " <<  server_ip << ":" << server_port << "\n";
 
     boost::asio::io_service io_service;
-    sqlproxy::server server(
-        io_service,
-        local_ip, local_port,
-        server_ip, server_port);
+    sqlproxy::server server(io_service, local_ip, local_port,
+                            server_ip, server_port, log_name);
 
     server.accept_connections();
     io_service.run();
 }  // void init_all(int argc, char **argv)
 }  // namespace sqlproxy
 
+/// Handle signals
+void signal_handler(int signum) {
+    std::string signame;
+    switch (signum) {
+    case SIGHUP:
+        signame = "SIGHUP";
+        break;
+    case SIGINT:
+        signame = "SIGINT";
+        break;
+    case SIGTERM:
+        signame = "SIGTERM";
+        break;
+    default:
+        signame = "UNKNOWN";
+    }
+    std::stringstream ss;
+    ss << "Exit by signal [" << signum << "] " << signame;
+    throw std::runtime_error(ss.str());
+}
+
 
 /// Entry point
 int main(int argc, char **argv) {
     try {
+        // Handling signals INT (Ctrl+C), TERM и HUP
+        signal(SIGINT , signal_handler);
+        signal(SIGTERM, signal_handler);
+        signal(SIGHUP , signal_handler);
+
         sqlproxy::init_all(argc, argv);
     } catch (po::required_option &err) {
         std::cerr << "Exception: " << err.what() << "\n";
