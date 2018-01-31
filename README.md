@@ -34,3 +34,7 @@ with cmake:
     $ mkdir .build && cd .build
     $ cmake ..
     $ make
+
+### Testing
+
+    $ pgbench -h localhost -U test -d testdb -p 3333 -c 24 -j 2 -T 360

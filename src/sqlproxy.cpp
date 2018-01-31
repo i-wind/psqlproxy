@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <csignal>
 
 
 namespace pt = boost::property_tree;
@@ -65,10 +66,36 @@ void init_all(int argc, char **argv) {
 }  // void init_all(int argc, char **argv)
 }  // namespace sqlproxy
 
+/// Handle signals
+void signal_handler(int signum) {
+    std::string signame;
+    switch (signum) {
+    case SIGHUP:
+        signame = "SIGHUP";
+        break;
+    case SIGINT:
+        signame = "SIGINT";
+        break;
+    case SIGTERM:
+        signame = "SIGTERM";
+        break;
+    default:
+        signame = "UNKNOWN";
+    }
+    std::stringstream ss;
+    ss << "Exit by signal [" << signum << "] " << signame;
+    throw std::runtime_error(ss.str());
+}
+
 
 /// Entry point
 int main(int argc, char **argv) {
     try {
+        // Handling signals INT (Ctrl+C), TERM и HUP
+        signal(SIGINT , signal_handler);
+        signal(SIGTERM, signal_handler);
+        signal(SIGHUP , signal_handler);
+
         sqlproxy::init_all(argc, argv);
     } catch (po::required_option &err) {
         std::cerr << "Exception: " << err.what() << "\n";
