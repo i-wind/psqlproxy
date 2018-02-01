@@ -6,8 +6,6 @@
 
 #include "logger.hpp"
 #include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/asio.hpp>
@@ -27,11 +25,11 @@ namespace sqlproxy {
 
 /// Class to represent client <-> server session
 class session
-    : public boost::enable_shared_from_this<session>
+    : public std::enable_shared_from_this<session>
 {
 public:
     /// Pointer type to session class
-    typedef boost::shared_ptr<session> ptr_type;
+    typedef std::shared_ptr<session> ptr_type;
 
     /// Session constructor
     session(boost::asio::io_service& ios, const std::string& log_name)
@@ -50,135 +48,137 @@ public:
 
     void start(const std::string& server_host,
                uint16_t server_port) {
-        /// Connect to PostgreSQL server
+        auto self = shared_from_this();
+        // Connect to PostgreSQL server
         server_socket_.async_connect(
             tcp::endpoint(
                 ip::address::from_string(server_host),
                 server_port),
-            boost::bind(
-                &session::on_server_connect,
-                shared_from_this(),
-                boost::asio::placeholders::error));
+            [this, self](const boost::system::error_code& ec) {
+                if (!ec) {
+                    std::cerr << "Connection to PostgreSQL\n";
+                    on_server_connect();
+                }
+                else {
+                    on_error(ec, "Connect");
+                }
+            });
     }
 
 private:
     /// PostgreSQL server connected
-    void on_server_connect(
-            const boost::system::error_code& ec) {
-        if (!ec) {
-            auto self(shared_from_this());
-            // Async read from PostgreSQL server
-            server_socket_.async_read_some(
-                boost::asio::buffer(server_data_, max_length),
-                boost::bind(
-                    &session::on_server_read,
-                    self,
-                    boost::asio::placeholders::error,
-                    boost::asio::placeholders::bytes_transferred));
+    void on_server_connect() {
+        auto self(shared_from_this());
+        // Async read from PostgreSQL server
+        server_socket_.async_read_some(
+            boost::asio::buffer(server_data_, max_length),
+            [this, self](const boost::system::error_code& ec, std::size_t length) {
+                if (!ec) {
+                    on_server_read(length);
+                }
+                else {
+                    on_error(ec, "Server read");
+                }
+            });
 
-            // Async read from client
-            client_socket_.async_read_some(
-                boost::asio::buffer(client_data_, max_length),
-                boost::bind(
-                    &session::on_client_read,
-                    self,
-                    boost::asio::placeholders::error,
-                    boost::asio::placeholders::bytes_transferred));
-        }
-        else {
-            close();
-        }
+        // Async read from client
+        client_socket_.async_read_some(
+            boost::asio::buffer(client_data_, max_length),
+            [this, self](const boost::system::error_code& ec, std::size_t length) {
+                if (!ec) {
+                    on_client_read(length);
+                }
+                else {
+                    on_error(ec, "Client read");
+                }
+            });
     }
 
     /// Send data from PostgreSQL server to client
-    void on_server_read(const boost::system::error_code& ec,
-                        const size_t& bytes_transferred) {
-        if (!ec) {
-            async_write(
-                client_socket_,
-                boost::asio::buffer(server_data_, bytes_transferred),
-                boost::bind(&session::on_client_write,
-                            shared_from_this(),
-                            boost::asio::placeholders::error));
-        }
-        else {
-            close();
-        }
+    void on_server_read(std::size_t length) {
+        auto self(shared_from_this());
+        boost::asio::async_write(
+            client_socket_,
+            boost::asio::buffer(server_data_, length),
+            [this, self](const boost::system::error_code& ec, std::size_t /*length*/) {
+                if (!ec) {
+                    on_client_write();
+                }
+                else {
+                    on_error(ec, "Client write");
+                }
+            });
     }
 
     /// Send data to PostgreSQL server
-    void on_client_read(const boost::system::error_code& ec,
-                        const size_t& bytes_transferred) {
-        if (!ec) {
-            if (client_data_[0] == 'Q') {
-                // Log sql request
-                // uint64_t p = (client_data_[1] << 24) +
-                //              (client_data_[2] << 16) +
-                //              (client_data_[3] << 8) +
-                //              client_data_[4];
-                // std::cout << p << "] ";
-                std::string command(
-                    &client_data_[5],
-                    bytes_transferred - 6);
-                logger_.log(command);
-            }
-            // Log connection user and database
-            // else {
-            //     std::string value(&client_data_[0], bytes_transferred);
-            //     std::size_t pos = value.find("user");
-            //     if (pos != std::string::npos) {
-            //         std::size_t pos1 = value.find("database");
-            //         if (pos1 != std::string::npos) {
-            //             std::stringstream ss;
-            //             ss << "Connection user: " << value.substr(pos + 5, pos1 - pos - 6)
-            //                << ", database: " << value.substr(pos1 + 9);
-            //             logger_.log(ss.str());
-            //         }
-            //     }
-            // }
+    void on_client_read(const std::size_t& length) {
+        if (client_data_[0] == 'Q') {
+            // Log sql request
+            // uint64_t p = (client_data_[1] << 24) +
+            //              (client_data_[2] << 16) +
+            //              (client_data_[3] << 8) +
+            //              client_data_[4];
+            // std::cout << p << "] ";
+            std::string command(&client_data_[5], length - 6);
+            logger_.log(command);
+        }
+        // else {
+        //     // Log connection user and database
+        //     std::string value(&client_data_[0], length);
+        //     std::size_t pos = value.find("user");
+        //     if (pos != std::string::npos) {
+        //         std::size_t pos1 = value.find("database");
+        //         if (pos1 != std::string::npos) {
+        //             std::stringstream ss;
+        //             ss << "Connection user: " << value.substr(pos + 5, pos1 - pos - 6)
+        //                 << ", database: " << value.substr(pos1 + 9, value.size() - pos1 - 11);
+        //             logger_.log(ss.str());
+        //         }
+        //     }
+        // }
 
-            async_write(
-                server_socket_,
-                boost::asio::buffer(client_data_, bytes_transferred),
-                boost::bind(&session::on_server_write,
-                            shared_from_this(),
-                            boost::asio::placeholders::error));
-        }
-        else {
-            close();
-        }
+        auto self(shared_from_this());
+        boost::asio::async_write(
+            server_socket_,
+            boost::asio::buffer(client_data_, length),
+            [this, self](const boost::system::error_code& ec, std::size_t /*length*/) {
+                if (!ec) {
+                    on_server_write();
+                }
+                else {
+                    on_error(ec, "Server write");
+                }
+            });
     }
 
     /// Async read from PostgreSQL server
-    void on_client_write(const boost::system::error_code& ec) {
-        if (!ec) {
-            server_socket_.async_read_some(
-                boost::asio::buffer(server_data_, max_length),
-                boost::bind(
-                    &session::on_server_read,
-                    shared_from_this(),
-                    boost::asio::placeholders::error,
-                    boost::asio::placeholders::bytes_transferred));
-        }
-        else {
-            close();
-        }
+    void on_client_write() {
+        auto self(shared_from_this());
+        server_socket_.async_read_some(
+            boost::asio::buffer(server_data_, max_length),
+            [this, self](const boost::system::error_code& ec, std::size_t length) {
+                if (!ec) {
+                    on_server_read(length);
+                }
+                else {
+                    on_error(ec, "Server read");
+                }
+            });
     }
 
     /// Async read from client
-    void on_server_write(const boost::system::error_code& ec) {
-        if (!ec) {
-            client_socket_.async_read_some(
-                boost::asio::buffer(client_data_, max_length),
-                boost::bind(
-                    &session::on_client_read,
-                    shared_from_this(),
-                    boost::asio::placeholders::error,
-                    boost::asio::placeholders::bytes_transferred));
-        }
-        else {
-            close();
-        }
+    void on_server_write() {
+        auto self(shared_from_this());
+        client_socket_.async_read_some(
+            boost::asio::buffer(client_data_, max_length),
+            [this, self](const boost::system::error_code& ec, std::size_t length) {
+                if (!ec) {
+                    on_client_read(length);
+                }
+                else {
+                    on_error(ec, "Client read");
+                }
+            });
     }
 
     /// Close client and server sockets
@@ -192,6 +192,15 @@ private:
         if (server_socket_.is_open()) {
             server_socket_.close();
         }
+    }
+
+    /// Log error and close sockets
+    void on_error(const boost::system::error_code& ec,
+                  const std::string& prefix) {
+        std::stringstream ss;
+        ss << prefix << " error: [" << ec.value() << "] " << ec.message();
+        logger_.log(ss.str());
+        close();
     }
 
     tcp::socket client_socket_;
@@ -227,7 +236,7 @@ public:
     bool accept_connections() {
         try {
             // Create session with client/server sockets
-            session_ = boost::make_shared<session>(io_service_, log_name_);
+            session_ = std::make_shared<session>(io_service_, log_name_);
 
             acceptor_.async_accept(
                 session_->client_socket(),
@@ -255,7 +264,7 @@ private:
             }
         }
         else {
-            std::cerr << "Error: " << ec.message() << "\n";
+            std::cerr << "Error: [" << ec.value() << "] " << ec.message() << "\n";
         }
     }
 
