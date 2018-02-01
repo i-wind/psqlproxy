@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "format.hpp"
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
@@ -11,9 +12,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <fstream>
-#include <sstream>
 #include <string>
-#include <ctime>
 
 namespace services {
 
@@ -139,26 +138,13 @@ public:
             &logger_service::use_file_impl, this, file));
     }
 
-    std::string cur_time() const {
-        std::array<char, 24> buf;
-        timeval tv;
-        gettimeofday(&tv, 0);
-        std::tm *now = localtime(&tv.tv_sec);
-        snprintf(&buf[0], 24, "%d-%02d-%02d %02d:%02d:%02d.%03ld",
-                 now->tm_year+1900, now->tm_mon+1, now->tm_mday, now->tm_hour,
-                 now->tm_min, now->tm_sec, tv.tv_usec/1000);
-
-        return std::string(&buf[0], 23);
-    }
-
     /// Log a message.
     void log(impl_type& impl, const std::string& message) {
-        std::ostringstream os;
-        os << "[" << cur_time() << "] " << impl->identifier << ": " << message;
-
+        auto str = format::fmt(
+            "[%s] %s: %s", format::time(), impl->identifier, message);
         // Pass the work of opening the file to the background thread.
         work_io_service_.post(boost::bind(
-            &logger_service::log_impl, this, os.str()));
+            &logger_service::log_impl, this, str));
     }
 
 private:
