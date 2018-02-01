@@ -6,8 +6,6 @@
 
 #include "logger.hpp"
 #include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/asio.hpp>
@@ -27,11 +25,11 @@ namespace sqlproxy {
 
 /// Class to represent client <-> server session
 class session
-    : public boost::enable_shared_from_this<session>
+    : public std::enable_shared_from_this<session>
 {
 public:
     /// Pointer type to session class
-    typedef boost::shared_ptr<session> ptr_type;
+    typedef std::shared_ptr<session> ptr_type;
 
     /// Session constructor
     session(boost::asio::io_service& ios, const std::string& log_name)
@@ -56,7 +54,7 @@ public:
             tcp::endpoint(
                 ip::address::from_string(server_host),
                 server_port),
-            [this, self] (const boost::system::error_code& ec) {
+            [this, self](const boost::system::error_code& ec) {
                 if (!ec) {
                     std::cerr << "Connection to PostgreSQL\n";
                     on_server_connect();
@@ -250,7 +248,7 @@ public:
     bool accept_connections() {
         try {
             // Create session with client/server sockets
-            session_ = boost::make_shared<session>(io_service_, log_name_);
+            session_ = std::make_shared<session>(io_service_, log_name_);
 
             acceptor_.async_accept(
                 session_->client_socket(),
@@ -278,7 +276,7 @@ private:
             }
         }
         else {
-            std::cerr << "Error: " << ec.message() << "\n";
+            std::cerr << "Error: [" << ec.value() << "] " << ec.message() << "\n";
         }
     }
 
