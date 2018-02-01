@@ -56,10 +56,16 @@ public:
             tcp::endpoint(
                 ip::address::from_string(server_host),
                 server_port),
-            [self] (const boost::system::error_code& ec) {
+            [this, self] (const boost::system::error_code& ec) {
                 if (!ec) {
                     std::cerr << "Connection to PostgreSQL\n";
-                    self->on_server_connect();
+                    on_server_connect();
+                }
+                else {
+                    std::stringstream ss;
+                    ss << "Connect error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
+                    close();
                 }
             });
     }
@@ -76,6 +82,9 @@ private:
                     on_server_read(length);
                 }
                 else {
+                    std::stringstream ss;
+                    ss << "Server read error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
                     close();
                 }
             });
@@ -85,9 +94,12 @@ private:
             boost::asio::buffer(client_data_, max_length),
             [this, self](const boost::system::error_code& ec, std::size_t length) {
                 if (!ec) {
-                    self->on_client_read(length);
+                    on_client_read(length);
                 }
                 else {
+                    std::stringstream ss;
+                    ss << "Client read error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
                     close();
                 }
             });
@@ -101,7 +113,13 @@ private:
             boost::asio::buffer(server_data_, length),
             [this, self](const boost::system::error_code& ec, std::size_t /*length*/) {
                 if (!ec) {
-                    self->on_client_write();
+                    on_client_write();
+                }
+                else {
+                    std::stringstream ss;
+                    ss << "Client write error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
+                    close();
                 }
             });
     }
@@ -139,7 +157,13 @@ private:
             boost::asio::buffer(client_data_, length),
             [this, self](const boost::system::error_code& ec, std::size_t /*length*/) {
                 if (!ec) {
-                    self->on_server_write();
+                    on_server_write();
+                }
+                else {
+                    std::stringstream ss;
+                    ss << "Server write error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
+                    close();
                 }
             });
     }
@@ -154,6 +178,9 @@ private:
                     on_server_read(length);
                 }
                 else {
+                    std::stringstream ss;
+                    ss << "Server read error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
                     close();
                 }
             });
@@ -169,6 +196,9 @@ private:
                     on_client_read(length);
                 }
                 else {
+                    std::stringstream ss;
+                    ss << "Client read error: [" << ec.value() << "] " << ec.message();
+                    logger_.log(ss.str());
                     close();
                 }
             });
