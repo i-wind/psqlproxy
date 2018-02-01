@@ -234,42 +234,26 @@ public:
         , server_port_(server_port)
         , server_host_(server_host)
         , log_name_(log_name)
-    {}
-
-    /// Accept client connections
-    bool accept_connections() {
-        try {
-            // Create session with client/server sockets
-            session_ = std::make_shared<session>(io_service_, log_name_);
-
-            acceptor_.async_accept(
-                session_->client_socket(),
-                boost::bind(&server::on_accept,
-                            this,
-                            boost::asio::placeholders::error));
-        }
-        catch (std::exception& e) {
-            std::cerr << "Server exception: " << e.what() << "\n";
-            return false;
-        }
-
-        return true;
+    {
+        on_accept();
     }
 
 private:
     /// On accept connection
-    void on_accept(const boost::system::error_code& ec) {
-        if (!ec) {
-            // Start session
-            session_->start(server_host_, server_port_);
-
-            if (!accept_connections()) {
-                std::cerr << "Error on call to accept connections.\n";
-            }
-        }
-        else {
-            std::cerr << "Error: [" << ec.value() << "] " << ec.message() << "\n";
-        }
+    void on_accept() {
+        session_ = std::make_shared<session>(io_service_, log_name_);
+        acceptor_.async_accept(
+            session_->client_socket(),
+            [this](const boost::system::error_code& ec) {
+                if (!ec) {
+                    // Start session
+                    session_->start(server_host_, server_port_);
+                    on_accept();
+                }
+                else {
+                    std::cerr << "Error: [" << ec.value() << "] " << ec.message() << "\n";
+                }
+            });
     }
 
     boost::asio::io_service& io_service_;

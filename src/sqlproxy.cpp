@@ -59,8 +59,7 @@ void init_all(int argc, char **argv) {
     boost::asio::io_service io_service;
     sqlproxy::server server(io_service, local_ip, local_port,
                             server_ip, server_port, log_name);
-
-    server.accept_connections();
+    // Start io_service
     io_service.run();
 }  // void init_all(int argc, char **argv)
 }  // namespace sqlproxy
