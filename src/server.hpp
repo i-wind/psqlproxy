@@ -49,7 +49,7 @@ public:
     void start(const std::string& server_host,
                uint16_t server_port) {
         auto self = shared_from_this();
-        /// Connect to PostgreSQL server
+        // Connect to PostgreSQL server
         server_socket_.async_connect(
             tcp::endpoint(
                 ip::address::from_string(server_host),
@@ -60,10 +60,7 @@ public:
                     on_server_connect();
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Connect error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Connect");
                 }
             });
     }
@@ -80,10 +77,7 @@ private:
                     on_server_read(length);
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Server read error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Server read");
                 }
             });
 
@@ -95,10 +89,7 @@ private:
                     on_client_read(length);
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Client read error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Client read");
                 }
             });
     }
@@ -114,10 +105,7 @@ private:
                     on_client_write();
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Client write error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Client write");
                 }
             });
     }
@@ -158,10 +146,7 @@ private:
                     on_server_write();
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Server write error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Server write");
                 }
             });
     }
@@ -176,10 +161,7 @@ private:
                     on_server_read(length);
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Server read error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Server read");
                 }
             });
     }
@@ -194,10 +176,7 @@ private:
                     on_client_read(length);
                 }
                 else {
-                    std::stringstream ss;
-                    ss << "Client read error: [" << ec.value() << "] " << ec.message();
-                    logger_.log(ss.str());
-                    close();
+                    on_error(ec, "Client read");
                 }
             });
     }
@@ -213,6 +192,15 @@ private:
         if (server_socket_.is_open()) {
             server_socket_.close();
         }
+    }
+
+    /// Log error and close sockets
+    void on_error(const boost::system::error_code& ec,
+                  const std::string& prefix) {
+        std::stringstream ss;
+        ss << prefix << " error: [" << ec.value() << "] " << ec.message();
+        logger_.log(ss.str());
+        close();
     }
 
     tcp::socket client_socket_;
