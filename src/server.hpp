@@ -5,6 +5,7 @@
 #pragma once
 
 #include "logger.hpp"
+#include <boost/any.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
@@ -56,7 +57,7 @@ public:
                 server_port),
             [this, self](const boost::system::error_code& ec) {
                 if (!ec) {
-                    std::cerr << "Connection to PostgreSQL\n";
+                    // std::cerr << "Connection to PostgreSQL\n";
                     on_server_connect();
                 }
                 else {
@@ -129,10 +130,11 @@ private:
         //     if (pos != std::string::npos) {
         //         std::size_t pos1 = value.find("database");
         //         if (pos1 != std::string::npos) {
-        //             std::stringstream ss;
-        //             ss << "Connection user: " << value.substr(pos + 5, pos1 - pos - 6)
-        //                 << ", database: " << value.substr(pos1 + 9, value.size() - pos1 - 11);
-        //             logger_.log(ss.str());
+        //             std::string str = format::fmt(
+        //                 "Connection user: %s, database: %s",
+        //                 value.substr(pos + 5, pos1 - pos - 6),
+        //                 value.substr(pos1 + 9, value.size() - pos1 - 11));
+        //             logger_.log(str);
         //         }
         //     }
         // }
@@ -197,9 +199,11 @@ private:
     /// Log error and close sockets
     void on_error(const boost::system::error_code& ec,
                   const std::string& prefix) {
-        std::stringstream ss;
-        ss << prefix << " error: [" << ec.value() << "] " << ec.message();
-        logger_.log(ss.str());
+        auto code = boost::any_cast<int>(ec.value());
+        if (!((code == 2) || (code == 125))) {
+            logger_.log(format::fmt(
+                "%s error: [%d] %s", prefix, code, ec.message()));
+        }
         close();
     }
 

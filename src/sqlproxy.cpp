@@ -81,9 +81,8 @@ void signal_handler(int signum) {
     default:
         signame = "UNKNOWN";
     }
-    std::stringstream ss;
-    ss << "Exit by signal [" << signum << "] " << signame;
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error(format::fmt(
+        "Exit by signal [%d] %s", signum, signame));
 }
 
 
