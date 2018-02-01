@@ -15,6 +15,11 @@ practice any non-privileged port number can be used.
 
 ### Setup database
 
+For proxy to work with requests in plain text `ssl` option in postgresql.conf
+must be switched off
+
+    ssl = false
+
 Create test role and database
 
     $ psql -U postgres -h localhost
